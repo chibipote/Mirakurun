@@ -14,7 +14,7 @@ Windows 環境と、Ubuntu 上での起動・サービス運用を確認して�
 ### 動作環境
 
 - Windows 10 / 11
-- Node.js 22 / 24
+- Node.js 22 / 24 / 26
 
 ### Linux
 
@@ -48,6 +48,8 @@ Windows サービスとして登録する場合は、管理者権限の PowerShe
 ```powershell
 npm run service:install.win32
 ```
+
+Windows サービスは Node.js に `--max-semi-space-size=2` を指定して起動します。ソースを更新しただけでは既存サービスの登録済み起動引数は変わらないため、この設定を反映する場合は上記コマンドで再登録してください。この設定の反映は機能利用の必須条件ではありません。
 
 登録されるサービス名は `mirakurun-nyanz` です。アンインストールは以下のコマンドで出来ます。
 

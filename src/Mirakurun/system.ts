@@ -72,11 +72,43 @@ export function getIPv6AddressesForListen(): string[] {
     return addresses;
 }
 
+/** アドレスごとの判定結果 (許可範囲の設定が変わったら破棄する) */
+const permittedIPAddressCache = new Map<string, boolean>();
+const PERMITTED_IP_ADDRESS_CACHE_MAX = 1024;
+// IP アドレスの文字列 (IPv6 の最長表記 45 文字) より長いものは保持しない
+const PERMITTED_IP_ADDRESS_CACHE_KEY_MAX_LENGTH = 45;
+let permittedIPAddressCacheRanges = "";
+
 export function isPermittedIPAddress(addr: string, serverConfig = _.config.server): boolean {
+    const { allowIPv4CidrRanges = [], allowIPv6CidrRanges = [] } = serverConfig;
+    const ranges = allowIPv4CidrRanges.join(",") + "|" + allowIPv6CidrRanges.join(",");
+    if (ranges !== permittedIPAddressCacheRanges) {
+        permittedIPAddressCache.clear();
+        permittedIPAddressCacheRanges = ranges;
+    }
+
+    if (addr.length > PERMITTED_IP_ADDRESS_CACHE_KEY_MAX_LENGTH) {
+        return checkPermittedIPAddress(addr, serverConfig);
+    }
+
+    let permitted = permittedIPAddressCache.get(addr);
+    if (permitted === undefined) {
+        permitted = checkPermittedIPAddress(addr, serverConfig);
+        if (permittedIPAddressCache.size >= PERMITTED_IP_ADDRESS_CACHE_MAX) {
+            permittedIPAddressCache.clear();
+        }
+        permittedIPAddressCache.set(addr, permitted);
+    }
+
+    return permitted;
+}
+
+function checkPermittedIPAddress(addr: string, serverConfig = _.config.server): boolean {
+    const { allowIPv4CidrRanges = [], allowIPv6CidrRanges = [] } = serverConfig;
     const [isIPv4] = Validator.isValidIPv4String(addr);
     if (isIPv4) {
         const ipv4 = new IPv4CidrRange(new IPv4(addr), new IPv4Prefix(32));
-        for (const rangeString of serverConfig.allowIPv4CidrRanges) {
+        for (const rangeString of allowIPv4CidrRanges) {
             if (ipv4.inside(IPv4CidrRange.fromCidr(rangeString))) {
                 return true;
             }
@@ -86,7 +118,7 @@ export function isPermittedIPAddress(addr: string, serverConfig = _.config.serve
     const [isIPv6] = Validator.isValidIPv6String(addr);
     if (isIPv6) {
         const ipv6 = new IPv6CidrRange(new IPv6(addr), new IPv6Prefix(128));
-        for (const rangeString of serverConfig.allowIPv6CidrRanges) {
+        for (const rangeString of allowIPv6CidrRanges) {
             if (ipv6.inside(IPv6CidrRange.fromCidr(rangeString))) {
                 return true;
             }
@@ -106,7 +138,31 @@ export function isPermittedHost(url: string, allowedHostname?: string): boolean 
     return false;
 }
 
-export async function getLatestVersion(): Promise<string> {
+/** 本家最新版の HTTPS 照会結果を共有する時間 (nyanz 版の Git 更新確認とは別) */
+const LATEST_VERSION_CACHE_TTL = 1000 * 60 * 10;
+let latestVersionCache: { version: Promise<string>, expiresAt: number } = null;
+
+export function getLatestVersion(): Promise<string> {
+    const now = Date.now();
+    if (latestVersionCache === null || latestVersionCache.expiresAt <= now) {
+        const cache = {
+            version: fetchLatestVersion(),
+            expiresAt: now + LATEST_VERSION_CACHE_TTL
+        };
+        latestVersionCache = cache;
+
+        // 失敗した結果は使い回さない
+        cache.version.catch(() => {
+            if (latestVersionCache === cache) {
+                latestVersionCache = null;
+            }
+        });
+    }
+
+    return latestVersionCache.version;
+}
+
+async function fetchLatestVersion(): Promise<string> {
     return new Promise((resolve, reject) => {
         const req = https.request("https://registry.npmjs.org/mirakurun/latest", {
             headers: {

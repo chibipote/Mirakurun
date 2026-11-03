@@ -1,10 +1,10 @@
 # Linux ネイティブ版
 
-このフォークは Linux での直接起動と systemd サービス登録に対応しています。Node.js 22 または 24 が必要です。実機チューナーを使った動作確認はまだ行っていません。
+このフォークは Linux での直接起動と systemd サービス登録に対応しています。Node.js 22 / 24 / 26 が必要です。実機チューナーを使った動作確認はまだ行っていません。
 
 ## インストール
 
-Linux 向けの変更は `develop` ブランチで作業中です。Git、Node.js 22 / 24、npm を用意し、ソースを取得してビルドします。
+Linux 向けの変更は `develop` ブランチで作業中です。Git、Node.js 22 / 24 / 26、npm を用意し、ソースを取得してビルドします。
 
 ```sh
 git clone -b develop https://github.com/nyanz00/Mirakurun.git
@@ -38,6 +38,8 @@ npm start
 ```sh
 sudo "$(command -v node)" bin/service.linux.js install --user "$(id -un)"
 ```
+
+systemd サービスは Node.js に `--max-semi-space-size=2` を指定して起動します。ソースを更新しただけでは既存サービスの登録済み起動引数は変わらないため、この設定を反映する場合はインストール手順を再実行してください。この設定の反映は機能利用の必須条件ではありません。
 
 サービスの状態とログは次のコマンドで確認できます。
 

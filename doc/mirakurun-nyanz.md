@@ -2,7 +2,7 @@
 
 この文書は、`nyanz00/Mirakurun` の Windows ネイティブ運用向けの変更点をまとめたものです。
 
-このフォークは Mirakurun 4.0.0 系を Windows 上で動かすための移植・調整版です。
+このフォークは Mirakurun 4.2.1 をベースに Windows 上で動かすための移植・調整版です。
 
 通常の Linux / Docker 環境で使う場合は、本家 Mirakurun を使ってください。
 
@@ -25,7 +25,7 @@
 
 ## インストール
 
-Node.js 22 / 24 のいずれかを入れた Windows 環境で実行してください。
+Node.js 22 / 24 / 26 のいずれかを入れた Windows 環境で実行してください。
 
 ```powershell
 git clone -b nyanz-master https://github.com/nyanz00/Mirakurun.git
@@ -124,6 +124,8 @@ npm start
 ```powershell
 npm run service:install.win32
 ```
+
+Windows サービスは Node.js に `--max-semi-space-size=2` を指定して起動します。ソースを更新しただけでは既存サービスの登録済み起動引数は変わらないため、この設定を反映する場合はインストール手順を再実行してください。この設定の反映は機能利用の必須条件ではありません。
 
 登録されるサービス名は `mirakurun-nyanz` です。本家 Mirakurun のサービス名とは別名になっているため、テストの際に本家をアンインストールする必要はありません。
 

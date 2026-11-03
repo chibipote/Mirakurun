@@ -63,6 +63,7 @@ describe("systemd registration", () => {
         assert.match(unit, /KillMode=control-group\n/);
         assert.match(unit, /WorkingDirectory=\/home\/nyanz\/Mirakurun folder\n/);
         assert.match(unit, /ExecStart="\/opt\/node\/bin\/node".*"\/home\/nyanz\/Mirakurun folder\/bin\/init.js"/);
+        assert.match(unit, /ExecStart=.* --max-semi-space-size=2 /);
         assert.match(unit, /PATH=\/opt\/node\/bin:/);
         assert.match(unit, /Environment=USING_SYSTEMD=1/);
     });
@@ -70,5 +71,35 @@ describe("systemd registration", () => {
         assert.match(createUnit("/repo%name", "/bin/node", "nyanz", "/home/nyanz"), /repo%%name/);
         assert.throws(() => createUnit("/repo", "/bin/node", "root", "/root"));
         assert.throws(() => createUnit("/repo\nUser=root", "/bin/node", "nyanz", "/home/nyanz"));
+    });
+});
+
+describe("Windows service registration", () => {
+    it("uses the portable entry point with the memory option when registering winser", () => {
+        const fs = require("node:fs");
+        const vm = require("node:vm");
+        const calls = [];
+        const executable = path.join(root, "Node folder", "node.exe");
+        vm.runInNewContext(fs.readFileSync(path.join(root, "bin", "service.win32.js"), "utf8"), {
+            __dirname: path.join(root, "bin"),
+            console: { log() {}, error: assert.fail },
+            process: { platform: "win32", execPath: executable, argv: [executable, "service.win32.js", "install"],
+                env: {}, exit: assert.fail },
+            require(name) {
+                if (name === "path") return path;
+                if (name === "fs") return { existsSync: () => true };
+                if (name === "child_process") return { execFileSync(command, args) {
+                    if (command === "sc.exe" || command === "where.exe") throw new Error("not installed");
+                    calls.push({ command, args: Array.from(args) });
+                } };
+                assert.fail(`Unexpected import: ${name}`);
+            }
+        });
+        assert.equal(calls.length, 1);
+        assert.equal(calls[0].command, executable);
+        const args = calls[0].args;
+        assert.equal(args[args.indexOf("--startcmd") + 1],
+            `"${executable}" --max-semi-space-size=2 "${path.join(root, "bin", "init.win32.js")}"`);
+        assert.ok(args.includes("USING_WINSER=1"));
     });
 });

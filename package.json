@@ -1,7 +1,7 @@
 {
   "name": "mirakurun",
   "description": "DVR Tuner Server for Japanese TV.",
-  "version": "4.1.5",
+  "version": "4.2.1",
   "homepage": "https://github.com/Chinachu/Mirakurun",
   "keywords": [
     "mirakurun",
@@ -35,12 +35,12 @@
   },
   "main": "lib/client.js",
   "scripts": {
-    "start": "node --max-semi-space-size=64 -r source-map-support/register bin/init.js",
-    "start.unix": "node --max-semi-space-size=64 -r source-map-support/register bin/init.js",
-    "debug": "node --max-semi-space-size=64 -r source-map-support/register --inspect bin/init.js",
-    "debug.unix": "node --max-semi-space-size=64 -r source-map-support/register --inspect=0.0.0.0:9229 bin/init.js",
-    "start.win32": "node.exe --max-semi-space-size=64 -r source-map-support/register bin/init.win32.js",
-    "debug.win32": "node.exe --max-semi-space-size=64 -r source-map-support/register --inspect bin/init.win32.js",
+    "start": "node --max-semi-space-size=2 -r source-map-support/register bin/init.js",
+    "start.unix": "node --max-semi-space-size=2 -r source-map-support/register bin/init.js",
+    "debug": "node --max-semi-space-size=2 -r source-map-support/register --inspect bin/init.js",
+    "debug.unix": "node --max-semi-space-size=2 -r source-map-support/register --inspect=0.0.0.0:9229 bin/init.js",
+    "start.win32": "node.exe --max-semi-space-size=2 -r source-map-support/register bin/init.win32.js",
+    "debug.win32": "node.exe --max-semi-space-size=2 -r source-map-support/register --inspect bin/init.win32.js",
     "service:install.win32": "node bin/service.win32.js install",
     "service:uninstall.win32": "node bin/service.win32.js uninstall",
     "service:install.linux": "node bin/service.linux.js install",
@@ -130,10 +130,14 @@
     "webpack-cli": "^4.9.2"
   },
   "overrides": {
-    "uuid": "^11.1.1"
+    "uuid": "^11.1.1",
+    "glob": "^14.0.3",
+    "tslint": {
+      "minimatch": "^11.0.1"
+    }
   },
   "engines": {
-    "node": "^22 || ^24"
+    "node": "^22 || ^24 || ^26"
   },
   "engineStrict": true,
   "os": [

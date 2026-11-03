@@ -119,7 +119,7 @@ if (fs.existsSync(logDir) === false) {
 const stdoutLogPath = path.join(logDir, "stdout.log");
 const stderrLogPath = path.join(logDir, "stderr.log");
 const initScriptPath = path.join(rootDir, "bin", "init.win32.js");
-const startCommand = `"${process.execPath}" "${initScriptPath}"`;
+const startCommand = `"${process.execPath}" --max-semi-space-size=2 "${initScriptPath}"`;
 
 execWinser([
     "-i", "-a", "--name", serviceName, "--displayname", serviceDisplayName, "--startuptype", "auto",

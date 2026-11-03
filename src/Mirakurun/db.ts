@@ -14,14 +14,17 @@
    limitations under the License.
 */
 import { dirname } from "path";
-import { existsSync, readFileSync } from "fs";
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { createWriteStream, existsSync, readFileSync } from "fs";
+import { copyFile, mkdir, readFile, rename, rm } from "fs/promises";
+import { Readable } from "stream";
+import { pipeline } from "stream/promises";
 import { promisify } from "util";
 import * as yieldableJSON from "yieldable-json";
 const parseAsync = promisify(yieldableJSON.parseAsync);
 import Queue from "promise-queue";
 import * as apid from "../../api";
 import * as log from "./log";
+import { stringifyJSONArray } from "./common";
 
 interface Service extends apid.Service {
     /** @deprecated */
@@ -85,15 +88,30 @@ async function load(path: string, integrity: string, sync = false): Promise<any[
 async function save(path: string, data: any[], integrity: string): Promise<void> {
     log.info("save db `%s` w/ integrity (%s)", path, integrity);
 
-    const writeData = [{ __integrity__: integrity }, ...data];
-
     return dbIOQueue.add(async () => {
-        const dirPath = dirname(path);
-        if (existsSync(dirPath) === false) {
-            await mkdir(dirPath, { recursive: true });
+        // JSON 全体を 1 つの文字列にせず、一時ファイルへ少しずつ書き出してから置き換える
+        // (書き込み途中の停止やエラーで既存のファイルを壊さないため)
+        const tmpPath = `${path}.tmp`;
+        try {
+            await mkdir(dirname(path), { recursive: true });
+            await pipeline(
+                Readable.from(stringifyJSONArray([{ __integrity__: integrity }], data)),
+                createWriteStream(tmpPath)
+            );
+            try {
+                await rename(tmpPath, path);
+            } catch (e) {
+                // ファイル単体がバインドマウントされている場合などは置き換えられないため、内容をコピーする
+                if (e.code !== "EBUSY" && e.code !== "EXDEV") {
+                    throw e;
+                }
+                await copyFile(tmpPath, path);
+            }
+        } catch (e) {
+            log.error("db `%s` save has failed (%s: %s)", path, e.name, e.message);
+        } finally {
+            await rm(tmpPath, { force: true });
         }
-
-        await writeFile(path, JSON.stringify(writeData));
     });
 }
 

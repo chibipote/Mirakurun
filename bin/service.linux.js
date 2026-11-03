@@ -38,7 +38,7 @@ WorkingDirectory=${root.replace(/%/g, "%%")}
 Environment=${quote(`HOME=${home}`)}
 Environment=${quote(`PATH=${nodeDir}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`)}
 Environment=USING_SYSTEMD=1
-ExecStart=${executable} --max-semi-space-size=64 -r source-map-support/register ${entry}
+ExecStart=${executable} --max-semi-space-size=2 -r source-map-support/register ${entry}
 Restart=always
 RestartSec=3
 TimeoutStopSec=30
@@ -55,7 +55,7 @@ function systemctl(...args) {
 
 function main() {
     if (process.platform !== "linux" || process.getuid() !== 0) {
-        throw new Error("Run this command on Linux with sudo using the Node.js 22/24 executable.");
+        throw new Error("Run this command on Linux with sudo using the Node.js 22/24/26 executable.");
     }
     const [action, ...args] = process.argv.slice(2);
     if (!["install", "uninstall"].includes(action) ||
@@ -72,7 +72,7 @@ function main() {
         return;
     }
     if (!require("semver").satisfies(process.version, require("../package.json").engines.node)) {
-        throw new Error("Use the Node.js 22/24 executable when registering the service.");
+        throw new Error("Use the Node.js 22/24/26 executable when registering the service.");
     }
     const user = args[1] || process.env.SUDO_USER;
     if (!user || !/^[a-z_][a-z0-9_-]*\$?$/i.test(user)) {
