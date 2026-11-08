@@ -1,7 +1,7 @@
 {
   "name": "mirakurun",
   "description": "DVR Tuner Server for Japanese TV.",
-  "version": "4.2.1",
+  "version": "4.3.0",
   "homepage": "https://github.com/Chinachu/Mirakurun",
   "keywords": [
     "mirakurun",
@@ -46,8 +46,9 @@
     "service:install.linux": "node bin/service.linux.js install",
     "service:uninstall.linux": "node bin/service.linux.js uninstall",
     "build": "npm run build:server && npm run build:webpack",
-    "build:server": "tslint --project . && tsc --declaration --incremental false",
+    "build:server": "tslint --project . && tsc --declaration --incremental false && node bin/build-bon-helper.win32.js --if-built",
     "build:webpack": "webpack",
+    "build:bon-helper": "node bin/build-bon-helper.win32.js",
     "watch": "concurrently -n w: npm:watch:*",
     "watch:server": "tsc -w --declaration",
     "watch:webpack": "webpack -w",
@@ -91,6 +92,9 @@
     "source-map-support": "0.5.21",
     "winser": "^1.0.3",
     "yieldable-json": "^2.1.0"
+  },
+  "optionalDependencies": {
+    "koffi": "3.3.6"
   },
   "devDependencies": {
     "@blueprintjs/core": "^5.17.6",

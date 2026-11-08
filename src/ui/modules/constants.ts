@@ -15,7 +15,7 @@
 */
 import { IconName } from "@blueprintjs/core";
 
-export const forkVersion = "4.2.1-nyanz1.0";
+export const forkVersion = "4.3.0-nyanz1.0";
 export const forkRepositoryUrl = "https://github.com/nyanz00/Mirakurun";
 
 export const channelTypeMap = {

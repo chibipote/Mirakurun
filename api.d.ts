@@ -177,7 +177,8 @@ export interface TunerDevice {
     name: string;
     types: ChannelType[];
     command: string;
-    pid: number;
+    /** `null` when no process is running (including when the tuner accesses the DVB device directly). */
+    pid: number | null;
     users: TunerUser[];
     isAvailable: boolean;
     isRemote: boolean;
@@ -215,7 +216,8 @@ export interface StreamInfo {
 }
 
 export interface TunerProcess {
-    pid: number;
+    /** `null` when the tuner accesses the DVB device directly (no process). */
+    pid: number | null;
 }
 
 export interface JobScheduleItem {
@@ -391,6 +393,10 @@ export interface ConfigTunersItem {
     command?: string;
     /** [dvb] dvr adapter device path */
     dvbDevicePath?: string;
+    /** [dvb] `true` to run the dvbv5-zap command instead of accessing the DVB device directly. */
+    disableDvbDirect?: boolean;
+    /** [win32] Experimental persistent BonDriver helper. Default false; closes the tuner when unused. */
+    enableBonDriverHelper?: boolean;
     /** [remote] specify to use remote Mirakurun host like as `192.168.1.x`. */
     remoteMirakurunHost?: string;
     /** [remote] specify to use remote Mirakurun port number (default: 40772). */

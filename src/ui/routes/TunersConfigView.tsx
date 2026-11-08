@@ -36,6 +36,7 @@ import {
 import equal from "fast-deep-equal";
 import * as ui from "../modules/ui";
 import { ConfigTuners, ConfigTunersItem, ChannelType, RemoteMirakurun } from "../../../api.d";
+import { parseCommandForSpawn } from "../../Mirakurun/command";
 
 import "./TunersConfigView.sass";
 
@@ -50,6 +51,25 @@ function sortTypes(types: ChannelType[]): ChannelType[] {
 
 function getChannelTypeDisplayName(type: ChannelType): string {
     return type.startsWith("GR-ALT") ? type.replace("GR-", "") : type;
+}
+
+// サーバーと同じく、コマンドを解釈したファイル名で dvbv5-zap かを判定する
+function isDvbv5ZapCommand(command: string): boolean {
+    try {
+        return parseCommandForSpawn(command).command.split("/").pop() === "dvbv5-zap";
+    } catch {
+        // 空のコマンド
+        return false;
+    }
+}
+
+function isBonRecTestCommand(command: string): boolean {
+    try {
+        const commandName = parseCommandForSpawn(command).command.split(/[\\/]/).pop() || "";
+        return /^BonRecTest(?:\.exe)?$/i.test(commandName);
+    } catch {
+        return false;
+    }
 }
 
 export const TunersConfigView: React.FC = () => {
@@ -338,6 +358,24 @@ export const TunersConfigView: React.FC = () => {
                                                         }}
                                                     />
                                                 </FormGroup>
+                                                {isBonRecTestCommand(tuner.command || "") && (
+                                                    <FormGroup
+                                                        label="BonDriver Helper（実験機能・既定OFF）"
+                                                        helperText="未使用チューナーを閉じます。利用には npm run build:bon-helper と Visual C++ Build Tools が必要です。BonDriver・チューニングスペース・チャンネルは既存のCommandから取得します。"
+                                                    >
+                                                        <Checkbox
+                                                            label="BonDriver Helper を有効化"
+                                                            checked={tuner.enableBonDriverHelper || false}
+                                                            onChange={(e) => {
+                                                                if (e.currentTarget.checked) {
+                                                                    updateTuner(i, { enableBonDriverHelper: true });
+                                                                } else {
+                                                                    deleteTunerProperty(i, "enableBonDriverHelper");
+                                                                }
+                                                            }}
+                                                        />
+                                                    </FormGroup>
+                                                )}
                                                 <FormGroup label="DVB Device Path">
                                                     <InputGroup
                                                         value={tuner.dvbDevicePath || ""}
@@ -351,6 +389,21 @@ export const TunersConfigView: React.FC = () => {
                                                         }}
                                                     />
                                                 </FormGroup>
+                                                {isDvbv5ZapCommand(tuner.command || "") && (
+                                                    <div style={{ marginBottom: "8px" }}>
+                                                        <Checkbox
+                                                            label="Disable DVB Direct"
+                                                            checked={tuner.disableDvbDirect || false}
+                                                            onChange={(e) => {
+                                                                if (e.currentTarget.checked) {
+                                                                    updateTuner(i, { disableDvbDirect: true });
+                                                                } else {
+                                                                    deleteTunerProperty(i, "disableDvbDirect");
+                                                                }
+                                                            }}
+                                                        />
+                                                    </div>
+                                                )}
                                             </>
                                         )}
                                         {(!tuner.command || tuner.remoteMirakurunHost || tuner.remoteMirakurunId) && (

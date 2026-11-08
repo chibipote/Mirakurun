@@ -31,6 +31,8 @@ npm run build
 
 旧 `win32` ブランチからの切り替えと更新方法は [Windows 版ドキュメント](doc/mirakurun-nyanz.md#ブランチと更新) を参照してください。
 
+Windows のローカル BonDriver チューナーでは、[BonDriver Helper（実験機能・既定OFF）](doc/BonDriverHelper.ja.md) も選べます。
+
 設定ファイルは `data\config\` に配置します。何も配置されていない場合、初回起動時に一応テンプレートが自動生成されるようになっています。
 
 - `data\config\server.yml`
