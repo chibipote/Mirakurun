@@ -7,7 +7,7 @@ see [Commit Logs](https://github.com/Chinachu/Mirakurun/commits/master) to check
 - 本家 Mirakurun 4.3.0 の変更を取り込みました。DVB デバイスの直接操作、配信開始までの待ち時間短縮、チューナー終了・再起動処理の改善を含みます。
 - Windows のローカルチューナー向けに、BonDriver Helper を実験機能として追加しました。チューナーごとの選択式で、既定は無効です。
   - Helper と DLL は常駐しますが、最後の利用者が終了したらチューナーを閉じます。無効時は従来の BonRecTest 方式で動作します。
-  - 利用には C++ Build Tools とヘルパーのビルドが必要です。設定・対応オプション・実機での確認手順は [BonDriver Helper](doc/BonDriverHelper.ja.md) を参照してください。
+  - x86 / x64 のヘルパー実行ファイルを同梱するため、通常の利用に C++ Build Tools やヘルパーのビルドは必要ありません。BonDriver DLL に応じて対応する実行ファイルを選びます。設定・対応オプション・実機での確認手順は [BonDriver Helper](doc/BonDriverHelper.ja.md) を参照してください。
 
 ## 4.3.0 (2026-11-06)
 

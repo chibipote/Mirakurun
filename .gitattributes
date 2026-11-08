@@ -1,1 +1,3 @@
 lib/** linguist-generated
+bin/native/*.exe binary linguist-generated
+bin/native/bon-helper-build.json linguist-generated

@@ -361,7 +361,7 @@ export const TunersConfigView: React.FC = () => {
                                                 {isBonRecTestCommand(tuner.command || "") && (
                                                     <FormGroup
                                                         label="BonDriver Helper（実験機能・既定OFF）"
-                                                        helperText="未使用チューナーを閉じます。利用には npm run build:bon-helper と Visual C++ Build Tools が必要です。BonDriver・チューニングスペース・チャンネルは既存のCommandから取得します。"
+                                                        helperText="未使用チューナーを閉じます。x86/x64 のヘルパー実行ファイルは同梱され、BonDriver DLL に応じて選択されます。BonDriver・チューニングスペース・チャンネルは既存のCommandから取得します。"
                                                     >
                                                         <Checkbox
                                                             label="BonDriver Helper を有効化"

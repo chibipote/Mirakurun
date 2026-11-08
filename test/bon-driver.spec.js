@@ -6,10 +6,12 @@ const assert = require("assert");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const { createHash } = require("crypto");
 
 const {
   parseBonRecTestCommand,
   getBonDriverArchitecture,
+  prepareBonDriverHelper,
   default: BonDriverDevice
 } = require("../lib/Mirakurun/BonDriverDevice");
 
@@ -17,6 +19,59 @@ let dir;
 
 before(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "mirakurun-bon-driver-"));
+});
+
+describe("[bon-driver.spec] bundled BonDriver helpers", () => {
+  const sha256 = binary => createHash("sha256").update(binary).digest("hex");
+
+  it("ships x86/x64 executables matching the manifest and current native sources", () => {
+    const root = path.resolve(__dirname, "..");
+    const bundleDir = path.join(root, "bin/native");
+    const manifest = JSON.parse(fs.readFileSync(path.join(bundleDir, "bon-helper-build.json"), "utf8"));
+    const { getSourceHash } = require("../bin/build-bon-helper.win32");
+    assert.strictEqual(manifest.sourceHash, getSourceHash(root), "native sources changed: rebuild and commit both EXEs and their manifest");
+    for (const arch of ["x64", "x86"]) {
+      const exe = path.join(bundleDir, `bon-helper-${arch}.exe`);
+      assert.strictEqual(sha256(fs.readFileSync(exe)), manifest.sha256[arch]);
+      assert.strictEqual(getBonDriverArchitecture(exe), arch);
+    }
+  });
+
+  it("repairs the runtime cache and gives a changed bundled EXE a different cache path", () => {
+    const root = path.join(dir, "cache-project");
+    const bundleDir = path.join(root, "bin/native");
+    fs.mkdirSync(bundleDir, { recursive: true });
+    const exe = path.join(bundleDir, "bon-helper-x64.exe");
+    const manifest = path.join(bundleDir, "bon-helper-build.json");
+    const first = Buffer.from("first bundled executable");
+    fs.writeFileSync(exe, first);
+    fs.writeFileSync(manifest, JSON.stringify({ sha256: { x64: sha256(first) } }));
+    const cached = prepareBonDriverHelper("x64", root);
+    assert.notStrictEqual(cached, exe);
+    assert.deepStrictEqual(fs.readFileSync(cached), first);
+    fs.writeFileSync(cached, "corrupted cache");
+    assert.strictEqual(prepareBonDriverHelper("x64", root), cached);
+    assert.deepStrictEqual(fs.readFileSync(cached), first);
+    fs.unlinkSync(cached);
+    assert.strictEqual(prepareBonDriverHelper("x64", root), cached);
+    const next = Buffer.from("updated bundled executable");
+    fs.writeFileSync(exe, next);
+    assert.throws(() => prepareBonDriverHelper("x64", root), /checksum mismatch/);
+    fs.writeFileSync(manifest, JSON.stringify({ sha256: { x64: sha256(next) } }));
+    const newCached = prepareBonDriverHelper("x64", root);
+    assert.notStrictEqual(newCached, cached);
+    assert.deepStrictEqual(fs.readFileSync(cached), first);
+    assert.deepStrictEqual(fs.readFileSync(newCached), next);
+  });
+
+  it("rejects a missing or malformed bundled manifest", () => {
+    const root = path.join(dir, "bad-bundle");
+    assert.throws(() => prepareBonDriverHelper("x64", root), /manifest is missing or invalid/);
+    const bundleDir = path.join(root, "bin/native");
+    fs.mkdirSync(bundleDir, { recursive: true });
+    fs.writeFileSync(path.join(bundleDir, "bon-helper-build.json"), JSON.stringify({ sha256: { x64: "../../other" } }));
+    assert.throws(() => prepareBonDriverHelper("x64", root), /hash is invalid/);
+  });
 });
 
 after(() => {

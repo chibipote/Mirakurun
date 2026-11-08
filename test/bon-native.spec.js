@@ -9,10 +9,56 @@ const path = require("node:path");
 const { once } = require("node:events");
 const { EventEmitter } = require("node:events");
 const { spawn } = require("node:child_process");
-const { default: BonDriverDevice } = require("../lib/Mirakurun/BonDriverDevice");
+const { createHash } = require("node:crypto");
+const { createInterface } = require("node:readline");
+const { default: BonDriverDevice, prepareBonDriverHelper } = require("../lib/Mirakurun/BonDriverDevice");
 const enabled = process.platform === "win32" && process.env.TEST_BON_NATIVE === "1";
 
 describe("BonDriver native helper (fixture DLL, no hardware)", { skip: !enabled }, () => {
+    it("can replace bundled EXEs while the cached helper is running", { timeout: 10000 }, async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bon-update-"));
+        const bundleDir = path.join(dir, "bin/native");
+        fs.mkdirSync(bundleDir, { recursive: true });
+        const binary = fs.readFileSync(path.resolve(__dirname, "../bin/native/bon-helper-x64.exe"));
+        const bundledExe = path.join(bundleDir, "bon-helper-x64.exe");
+        const manifestPath = path.join(bundleDir, "bon-helper-build.json");
+        const publish = buffer => {
+            fs.writeFileSync(bundledExe, buffer);
+            fs.writeFileSync(manifestPath, JSON.stringify({ sha256: { x64: createHash("sha256").update(buffer).digest("hex") } }));
+        };
+        publish(binary);
+        const cachedExe = prepareBonDriverHelper("x64", dir);
+        const driver = path.resolve(__dirname, "../lib/native/bon-test-x64.dll");
+        const child = spawn(cachedExe, [driver, String(process.pid)], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
+        const replies = createInterface({ input: child.stderr });
+        // Drain the binary TS pipe while the test changes the distributed files.
+        child.stdout.resume();
+        try {
+            const [ready] = await once(replies, "line");
+            assert.equal(ready, "NYANZ_BON 0 OK");
+            let reply = once(replies, "line");
+            child.stdin.write("TUNE 1 0 24\n");
+            assert.equal((await reply)[0], "NYANZ_BON 1 OK");
+            // Windows locks the running cache file, but Git's bundled file stays replaceable.
+            assert.throws(() => fs.writeFileSync(cachedExe, binary));
+            publish(Buffer.concat([binary, Buffer.from("new bundle version")]));
+            const newCachedExe = prepareBonDriverHelper("x64", dir);
+            assert.notEqual(newCachedExe, cachedExe);
+            assert.deepEqual(fs.readFileSync(cachedExe), binary);
+            reply = once(replies, "line");
+            child.stdin.write("STOP 2\n");
+            assert.equal((await reply)[0], "NYANZ_BON 2 OK");
+        } finally {
+            replies.close();
+            const closed = once(child, "close");
+            child.kill();
+            await closed;
+            assert.equal(path.dirname(path.resolve(dir)), path.resolve(os.tmpdir()));
+            assert.ok(path.basename(dir).startsWith("bon-update-"));
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
     for (const arch of ["x64", "x86"]) {
         it(`${arch}: reuses helper, releases idle tuner, rejects stale TS and closes on failure`, { timeout: 20000 }, async () => {
             const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bon-native-"));

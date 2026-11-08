@@ -10,6 +10,7 @@
    limitations under the License.
 */
 import * as childProcess from "child_process";
+import { createHash, randomBytes } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import EventEmitter = require("eventemitter3");
@@ -68,6 +69,55 @@ export function getBonDriverArchitecture(driver: string): "x64" | "x86" {
     } finally {
         fs.closeSync(file);
     }
+}
+
+/** Run a verified cached copy, so Git can replace the bundled EXE during a Windows Web update. */
+export function prepareBonDriverHelper(arch: "x64" | "x86", root = path.resolve(__dirname, "..", "..")): string {
+    const bundleDir = path.join(root, "bin", "native");
+    let hash: string;
+    try {
+        hash = JSON.parse(fs.readFileSync(path.join(bundleDir, "bon-helper-build.json"), "utf8")).sha256?.[arch];
+    } catch (_) {
+        throw new Error("Bundled BonDriver helper manifest is missing or invalid. Update or restore bin/native");
+    }
+    if (typeof hash !== "string" || !/^[a-f0-9]{64}$/.test(hash)) {
+        throw new Error("Bundled BonDriver helper hash is invalid. Update or restore bin/native");
+    }
+    const bundledExe = path.join(bundleDir, `bon-helper-${arch}.exe`);
+    const binary = fs.readFileSync(bundledExe);
+    const sha256 = (data: Buffer) => createHash("sha256").update(data).digest("hex");
+    if (sha256(binary) !== hash) {
+        throw new Error("Bundled BonDriver helper checksum mismatch. Update or restore bin/native");
+    }
+    const cacheDir = path.join(root, "lib", "native");
+    const cachedExe = path.join(cacheDir, `bon-helper-${hash}-${arch}.exe`);
+    const isCurrent = () => {
+        try {
+            return sha256(fs.readFileSync(cachedExe)) === hash;
+        } catch (_) {
+            return false;
+        }
+    };
+    fs.mkdirSync(cacheDir, { recursive: true });
+    if (!isCurrent()) {
+        const temp = `${cachedExe}.${process.pid}.${randomBytes(8).toString("hex")}.tmp`;
+        try {
+            fs.writeFileSync(temp, binary, { flag: "wx" });
+            try {
+                fs.renameSync(temp, cachedExe);
+            } catch (err) {
+                // Another Mirakurun process may have published and started this same cached copy.
+                if (!isCurrent()) {
+                    throw err;
+                }
+            }
+        } finally {
+            if (fs.existsSync(temp)) {
+                fs.unlinkSync(temp);
+            }
+        }
+    }
+    return cachedExe;
 }
 
 const children = new Set<childProcess.ChildProcess>();
@@ -175,20 +225,7 @@ export default class BonDriverDevice extends EventEmitter {
         if (process.platform !== "win32") {
             throw new Error("BonDriver helper is Windows-only");
         }
-        const nativeDir = path.join(__dirname, "..", "native");
-        let version: string;
-        try {
-            version = JSON.parse(fs.readFileSync(path.join(nativeDir, "bon-helper-build.json"), "utf8")).version;
-        } catch (_) {
-            version = "";
-        }
-        if (!/^[a-f0-9]{16}$/.test(version)) {
-            throw new Error("BonDriver helper is missing. Run npm run build:bon-helper with Visual Studio C++ Build Tools installed");
-        }
-        const exe = path.join(nativeDir, `bon-helper-${version}-${getBonDriverArchitecture(this.driver)}.exe`);
-        if (!fs.existsSync(exe)) {
-            throw new Error("BonDriver helper is missing. Run npm run build:bon-helper");
-        }
+        const exe = prepareBonDriverHelper(getBonDriverArchitecture(this.driver));
         const child = childProcess.spawn(exe, [this.driver, String(process.pid)], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
         this._process = child;
         children.add(child);

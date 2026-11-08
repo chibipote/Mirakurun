@@ -4,17 +4,19 @@ BonDriver Helper は、Windows のローカルチューナーで BonDriver DLL �
 
 無効のままなら、現在の BonRecTest コマンドの起動方法で動作します。この機能は Windows のローカルチューナー専用です。Remote Mirakurun の接続先には適用されません。
 
-## ビルド
+## 利用
 
-Windows に Visual Studio C++ Build Tools をインストールします。Visual Studio Installer で「C++ によるデスクトップ開発」を選び、Windows SDK も含めてください。
+Windows 用の x86 / x64 ヘルパー実行ファイルはリポジトリの `bin/native` に同梱されています。Git で更新すると取得できるため、通常の `npm install`、`npm run build`、Web 更新で C++ Build Tools やヘルパーのビルドは必要ありません。BonDriver DLL の PE ヘッダーからアーキテクチャを判定し、対応するヘルパーを選びます。x86 と x64 以外の DLL は使えません。
 
-Mirakurun のリポジトリ直下で次を実行します。
+同梱版は起動時に `lib/native` のキャッシュへコピーして実行します。`npm run clean` でキャッシュが削除された場合も、次回起動時に同梱版から自動で作成されます。
+
+## 開発者向け再ビルド
+
+ヘルパーを再ビルドする場合は、Windows に Visual Studio C++ Build Tools をインストールし、Visual Studio Installer で「C++ によるデスクトップ開発」と Windows SDK を選択してください。Mirakurun のリポジトリ直下で次を実行します。
 
     npm run build:bon-helper
 
-ビルドスクリプトが x86 用と x64 用のヘルパーを作成します。BonDriver DLL の PE ヘッダーからアーキテクチャを判定し、対応するヘルパーを選びます。x86 と x64 以外の DLL は使えません。
-
-以前にヘルパーをビルドした環境では、Web 更新などで通常の `npm run build` が実行されると、ネイティブソースが更新されていればヘルパーを再ビルドします。機能を利用する環境では C++ Build Tools を残してください。`npm run clean` はビルド記録と生成物も削除するため、clean の後は `npm run build:bon-helper` を明示的に実行してください。
+ビルドスクリプトが x86 用と x64 用のヘルパーを作成します。生成した `bin/native/*.exe` と `bin/native/bon-helper-build.json` は、変更した C++ ソースと一緒にコミットしてください。
 
 ## 有効化
 

@@ -46,7 +46,7 @@
     "service:install.linux": "node bin/service.linux.js install",
     "service:uninstall.linux": "node bin/service.linux.js uninstall",
     "build": "npm run build:server && npm run build:webpack",
-    "build:server": "tslint --project . && tsc --declaration --incremental false && node bin/build-bon-helper.win32.js --if-built",
+    "build:server": "tslint --project . && tsc --declaration --incremental false",
     "build:webpack": "webpack",
     "build:bon-helper": "node bin/build-bon-helper.win32.js",
     "watch": "concurrently -n w: npm:watch:*",
